@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# Shared ccid runner; coverage selectors are explicit.
+schema = 1
+project = "nixkernel"
+
+[checks.native]
+kind = "nix"
+mode = "native"
+
+[checks.eval]
+kind = "nix"
+mode = "eval"
+
+[checks.list]
+kind = "nix"
+mode = "list"
+
+[checks.all-systems]
+kind = "nix"
+mode = "all-systems"
+
+# Pre-existing nix checks above preserved verbatim; Crow job wiring appended below.
+
+[render]
+tool_revision = "81ebac8e86e20bc93b69d5e912bbcb0c0d036d58"
+
+[jobs.verify]
+scheduler = "crow"
+checks = ["native", "eval", "list", "all-systems"]
+workflow = "repository-jobs"
+command = ["bash", ".ci/run-cached.sh"]
