@@ -89,7 +89,7 @@ the evaluation and the post-boot unit so the two cannot disagree.
 ```
 
 This host gets `linuxPackages-cachyos-latest-lto-x86_64-v3` with `zfs_cachyos`, the fallback entry,
-`nixkernel-verify`, `transparent_hugepage=madvise`, `aesni_intel` in the initrd and the source's cache.
+`nixkernel-verify`, `aesni_intel` in the initrd and the source's cache.
 Forcing `nixkernel.level = "zen4"` on it fails evaluation, naming what the declared CPU lacks.
 
 ## Options
@@ -107,7 +107,7 @@ Forcing `nixkernel.level = "zen4"` on it fails evaluation, naming what the decla
 | `cache.{enable,substituter,publicKey}` | `true`, the source's cache | `extra-substituters`/`extra-trusted-public-keys` |
 | `zfs.cachyos` | `true` | `zfs_cachyos` at CachyOS levels; `false` keeps nixpkgs' ZFS (needs a line under the OpenZFS cap) |
 | `floors` | `{ }` | kernel versions other domains require |
-| `transparentHugepage` | `"madvise"` | at CachyOS levels; `null` keeps the build's `always` |
+| `transparentHugepage` | `null` | THP belongs to nixram (`nixram.thp`); set only on a host without nixram |
 | `initrdAesni` | `true` | `aesni_intel` in the initrd at CachyOS levels |
 
 Every option is documented in [`modules/nixkernel.nix`](modules/nixkernel.nix); the design and the

@@ -281,11 +281,12 @@ in
           "never"
         ]
       );
-      default = "madvise";
+      default = null;
       description = ''
-        `transparent_hugepage=` on the kernel command line at CachyOS levels. CachyOS builds with
-        `always`; the generic kernel's default, and PostgreSQL's guidance, is `madvise`, and one value
-        on every level keeps THP out of a comparison between kernels. `null` keeps the build's default.
+        `transparent_hugepage=` on the kernel command line at CachyOS levels. `null` (the default)
+        renders nothing: transparent hugepages belong to nixram (`nixram.thp`, every switch per RAM
+        level, at boot and at run time), which refuses any THP parameter it did not render. Set this
+        only on a host without nixram.
       '';
     };
 
@@ -363,7 +364,7 @@ in
 
     # The kernel is PREEMPT_DYNAMIC (full by default, HZ=1000): `preempt=none|voluntary|full|lazy` on
     # the command line, or /sys/kernel/debug/sched/preempt at run time, changes the preemption model
-    # without another kernel. Only THP is set here.
+    # without another kernel. THP is nixram's; this renders it only when explicitly set.
     boot.kernelParams = mkIf (cachyos && cfg.transparentHugepage != null) [
       "transparent_hugepage=${cfg.transparentHugepage}"
     ];

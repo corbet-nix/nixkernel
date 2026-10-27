@@ -88,7 +88,7 @@ Applied only at CachyOS levels; the fallback entry has none of them.
 
 | Option | Default | Why |
 |---|---|---|
-| `transparentHugepage` | `madvise` | CachyOS builds with THP `always`; the generic kernel's default and PostgreSQL's guidance are `madvise`. One value on every level keeps THP out of a comparison between kernels. `null` keeps `always`. |
+| `transparentHugepage` | `null` | Transparent hugepages belong to nixram (`nixram.thp`: every switch per RAM level, boot and run time), which refuses a THP parameter it did not render. Set only on a host without nixram. |
 | `initrdAesni` | `true` | The 7.x kernels' initrd does not pull `aesni_intel` in through `aes` (the 6.18 one does); without it a LUKS root is opened with the generic AES code. Observed on the 7.2 line; not re-checked for every release. |
 | `zfs.cachyos` | `true` | `zfs_cachyos` follows kernels newer than upstream OpenZFS supports; with `false` the line must stay under the OpenZFS kernel cap (`lts`). |
 

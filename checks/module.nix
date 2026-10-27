@@ -44,12 +44,15 @@ in
   ) "a Zen 5 host must get the zen4 set and its zfs_cachyos, with no refusal")
 
   # Catches: the CachyOS-level adjustments, the cache or the unit going missing.
-  (check "module/cachyos-level-adjustments" (
-    lib.elem "transparent_hugepage=madvise" onZen5.boot.kernelParams
-    && lib.elem "aesni_intel" onZen5.boot.initrd.availableKernelModules
-    && lib.elem "https://attic.xuyh0120.win/lantian" onZen5.nix.settings.extra-substituters
-    && onZen5.systemd.services ? nixkernel-verify
-  ) "THP madvise, aesni_intel, the cache and nixkernel-verify must be present at a CachyOS level")
+  (check "module/cachyos-level-adjustments"
+    (
+      !(lib.any (lib.hasPrefix "transparent_hugepage=") onZen5.boot.kernelParams)
+      && lib.elem "aesni_intel" onZen5.boot.initrd.availableKernelModules
+      && lib.elem "https://attic.xuyh0120.win/lantian" onZen5.nix.settings.extra-substituters
+      && onZen5.systemd.services ? nixkernel-verify
+    )
+    "aesni_intel, the cache and nixkernel-verify must be present at a CachyOS level, and no THP parameter (nixram owns THP)"
+  )
 
   # Catches: the fallback entry missing, or running a CachyOS kernel or ZFS.
   (check "module/fallback-entry-runs-the-generic-kernel"
