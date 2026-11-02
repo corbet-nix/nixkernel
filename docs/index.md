@@ -9,8 +9,7 @@ in [`../lib/levels.nix`](../lib/levels.nix).
 The CachyOS kernel, packaged for Nix by
 [xddxdd/nix-cachyos-kernel](https://github.com/xddxdd/nix-cachyos-kernel). It is the maintained
 CachyOS patchset and configuration, not a re-derivation, and the maintainer publishes pre-built
-variants to a binary cache (`attic.xuyh0120.win/lantian`, key
-`lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=`).
+variants to a binary cache (its URL and signing key are the consumer's to declare, see below).
 
 - Use the **`release` branch**: it carries the variants the maintainer's CI has built.
 - Do **not** make the source's nixpkgs follow yours. The kernel derivation depends on it, and the
@@ -24,6 +23,17 @@ variants to a binary cache (`attic.xuyh0120.win/lantian`, key
 The source's `nixConfig` declares its cache, but nothing applies a flake input's `nixConfig`, so
 nixkernel declares it (`cache.*`) as `extra-substituters`/`extra-trusted-public-keys`: the
 `extra-` form survives a host that sets its own substituter list with `mkForce`.
+
+**The module has no default for the cache URL and key.** A signing key a host trusts is that host's
+decision. The maintainer's cache was compromised on 2026-10-15
+([xddxdd/nix-cachyos-kernel#110](https://github.com/xddxdd/nix-cachyos-kernel/issues/110)); a
+module default naming it kept every host that never set the option trusting a key whose holder could
+sign arbitrary store paths. The replacement pair, announced by the maintainer on 2026-10-24, is the
+`nixConfig` of the source's `release` branch; a consumer copies it into one place of its own
+configuration and checks it against that announcement before trusting it. With `cache.enable` true
+(the default) and no pair, evaluation is refused with a message that says so, instead of silently
+leaving the kernel to compile for hours. The compromised pair itself is refused by an assertion, even
+when a host names it explicitly. `cache.enable = false` needs neither.
 
 ## 2. Binary cache versus a local compile
 

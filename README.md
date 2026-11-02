@@ -104,7 +104,7 @@ Forcing `nixkernel.level = "zen4"` on it fails evaluation, naming what the decla
 | `level` | from `preference` | force one; refused if the CPU cannot run it |
 | `fallback.{enable,name}` | `true`, `"generic-kernel"` | guard 2 |
 | `verify.enable` | `true` | guard 3 |
-| `cache.{enable,substituter,publicKey}` | `true`, the source's cache | `extra-substituters`/`extra-trusted-public-keys` |
+| `cache.{enable,substituter,publicKey}` | `true`, and **no default pair** | `extra-substituters`/`extra-trusted-public-keys`; with the cache enabled the host must set both, and the pair compromised on 2026-10-15 is refused |
 | `zfs.cachyos` | `true` | `zfs_cachyos` at CachyOS levels; `false` keeps nixpkgs' ZFS (needs a line under the OpenZFS cap) |
 | `floors` | `{ }` | kernel versions other domains require |
 | `transparentHugepage` | `null` | THP belongs to nixram (`nixram.thp`); set only on a host without nixram |

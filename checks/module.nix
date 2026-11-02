@@ -8,6 +8,9 @@ let
     evalWith
     zen5
     zen3
+    testCache
+    compromisedCache
+    optionsOf
     refusals
     refusedWith
     check
@@ -48,10 +51,86 @@ in
     (
       !(lib.any (lib.hasPrefix "transparent_hugepage=") onZen5.boot.kernelParams)
       && lib.elem "aesni_intel" onZen5.boot.initrd.availableKernelModules
-      && lib.elem "https://attic.xuyh0120.win/lantian" onZen5.nix.settings.extra-substituters
+      && lib.elem testCache.substituter onZen5.nix.settings.extra-substituters
       && onZen5.systemd.services ? nixkernel-verify
     )
     "aesni_intel, the cache and nixkernel-verify must be present at a CachyOS level, and no THP parameter (nixram owns THP)"
+  )
+
+  # Catches: the declared pair not reaching nix.settings, or reaching it half (URL without key).
+  (check "module/cache-pair-renders-as-declared" (
+    lib.elem testCache.substituter onZen5.nix.settings.extra-substituters
+    && lib.elem testCache.publicKey onZen5.nix.settings.extra-trusted-public-keys
+    && refusals onZen5 == [ ]
+  ) "the declared substituter and key must both be in extra-substituters/extra-trusted-public-keys")
+
+  # Catches: a default pair coming back in the option declarations (the module would again hand every host a trust root
+  # nobody chose; the other cache checks pass a pair explicitly and would not notice).
+  (check "module/cache-url-and-key-have-no-default"
+    (optionsOf.cache.substituter.default == null && optionsOf.cache.publicKey.default == null)
+    "nixkernel.cache.substituter and nixkernel.cache.publicKey must default to null: the pair is the host's decision"
+  )
+
+  # Catches: a default pair coming back. A host that never declared a cache must not get a trust root nobody chose;
+  # the incident of 2026-10-15 was exactly a default naming a compromised cache.
+  (check "module/cache-without-a-pair-is-refused"
+    (
+      let
+        noPair = eval (
+          zen5
+          // {
+            nixkernel.cache = {
+              substituter = lib.mkForce null;
+              publicKey = lib.mkForce null;
+            };
+          }
+        );
+        onlyUrl = eval (zen5 // { nixkernel.cache.publicKey = lib.mkForce null; });
+        off = eval (
+          zen5
+          // {
+            nixkernel.cache = {
+              enable = false;
+              substituter = lib.mkForce null;
+              publicKey = lib.mkForce null;
+            };
+          }
+        );
+      in
+      refusedWith noPair "is true, but nixkernel.cache.substituter"
+      && refusedWith onlyUrl "is true, but nixkernel.cache.substituter"
+      && !(
+        noPair.nix.settings ? extra-trusted-public-keys
+        && noPair.nix.settings.extra-trusted-public-keys != [ ]
+      )
+      && refusals off == [ ]
+    )
+    "an enabled cache without both URL and key must be refused and render nothing; a disabled cache needs neither"
+  )
+
+  # Catches: the compromised pair accepted when a host names it explicitly (by URL or by key), or refused while disabled.
+  (check "module/the-compromised-pair-is-refused-even-when-set"
+    (
+      let
+        oldUrl = eval (zen5 // { nixkernel.cache.substituter = lib.mkForce compromisedCache.substituter; });
+        oldKey = eval (zen5 // { nixkernel.cache.publicKey = lib.mkForce compromisedCache.publicKey; });
+        off = eval (
+          zen5
+          // {
+            nixkernel.cache = {
+              enable = false;
+              substituter = lib.mkForce compromisedCache.substituter;
+              publicKey = lib.mkForce compromisedCache.publicKey;
+            };
+          }
+        );
+      in
+      refusedWith oldUrl "names the cache pair that was compromised"
+      && refusedWith oldKey "names the cache pair that was compromised"
+      && refusals off == [ ]
+      && !(lib.elem compromisedCache.publicKey (off.nix.settings.extra-trusted-public-keys or [ ]))
+    )
+    "the pair of 2026-10-15 must be refused by URL and by key while the cache is enabled, and never rendered"
   )
 
   # Catches: the fallback entry missing, or running a CachyOS kernel or ZFS.
@@ -124,7 +203,7 @@ in
     && !(bare.systemd.services ? nixkernel-verify)
     && !(lib.elem "aesni_intel" bare.boot.initrd.availableKernelModules)
     && !(lib.any (lib.hasPrefix "transparent_hugepage=") bare.boot.kernelParams)
-    && !(lib.elem "https://attic.xuyh0120.win/lantian" (bare.nix.settings.extra-substituters or [ ]))
+    && !(lib.elem testCache.substituter (bare.nix.settings.extra-substituters or [ ]))
     && bare.boot.zfs.package.name != "zfs-cachyos-x86_64-v3"
   ) "with fallback, verify, cache, THP, aesni and zfs.cachyos off only the kernel may change")
 

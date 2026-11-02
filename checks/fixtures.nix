@@ -56,6 +56,17 @@ let
       };
     };
 
+  # The cache pair has no default in the module, so every evaluation declares one. It is a stand-in, never a real cache.
+  testCache = {
+    substituter = "https://cache.test.invalid/kernels";
+    publicKey = "test-cache-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  };
+  # The pair that was compromised on 2026-10-15; the module refuses it.
+  compromisedCache = {
+    substituter = "https://attic.xuyh0120.win/lantian";
+    publicKey = "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=";
+  };
+
   base = {
     boot.loader.grub.enable = false;
     fileSystems."/" = {
@@ -66,6 +77,7 @@ let
     nixkernel = {
       enable = true;
       inherit source;
+      cache = { inherit (testCache) substituter publicKey; };
     };
   };
 
@@ -82,6 +94,13 @@ let
       ++ lib.optional withNixcpu nixcpuShape;
     }).config;
   eval = evalWith true;
+
+  # The option declarations alone, with no definitions: what a host that sets nothing would get.
+  optionsOf =
+    (import (nixpkgs + "/nixos/lib/eval-config.nix") {
+      inherit system;
+      modules = [ nixkernelModule ];
+    }).options.nixkernel;
 
   # CPU facts as nixcpu declares them.
   cpu =
@@ -132,6 +151,9 @@ in
     zen5
     zen3
     intelV4
+    testCache
+    compromisedCache
+    optionsOf
     refusals
     refusedWith
     check

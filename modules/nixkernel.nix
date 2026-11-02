@@ -34,6 +34,18 @@ let
     ;
 
   cfg = config.nixkernel;
+
+  # The cache pair of the kernel source that was compromised on 2026-10-15 (xddxdd/nix-cachyos-kernel issue #110). It is
+  # refused even when a host sets it explicitly. Its replacement (announced by the maintainer on 2026-10-24) is NOT a
+  # default here: a signing key a host trusts is that host's decision, see `cache`.
+  compromisedCache = {
+    host = "attic.xuyh0120.win";
+    publicKey = "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=";
+  };
+  cacheDeclared = cfg.cache.substituter != null && cfg.cache.publicKey != null;
+  cacheCompromised =
+    (cfg.cache.substituter != null && lib.hasInfix compromisedCache.host cfg.cache.substituter)
+    || cfg.cache.publicKey == compromisedCache.publicKey;
   k = import ../lib/levels.nix { inherit lib; };
   levelNames = lib.attrNames k.levels;
 
@@ -217,18 +229,29 @@ in
         description = ''
           Declare the source's binary cache (`extra-substituters`, `extra-trusted-public-keys`), so
           the host fetches the kernel instead of compiling it. The source's own `nixConfig` is not
-          applied to a flake input, hence this.
+          applied to a flake input, hence this. With the cache enabled, `substituter` and `publicKey`
+          must be set: an evaluation without them is refused, not silently left to compile the
+          kernel for hours.
         '';
       };
       substituter = mkOption {
-        type = types.str;
-        default = "https://attic.xuyh0120.win/lantian";
-        description = "The binary cache of the kernel source.";
+        type = types.nullOr types.str;
+        default = null;
+        example = "https://cache.example.org/kernels";
+        description = ''
+          The binary cache of the kernel source. No default, on purpose: it is a trust decision, and
+          a default outlives the reasons it was right. The source's cache was compromised on
+          2026-10-15 (nix-cachyos-kernel issue #110); a default naming it would have kept every
+          host that never set the option trusting it. Take the pair from the maintainer's
+          announcement (the `nixConfig` of the source's release branch) and keep it in one place of
+          the consumer. The compromised pair is refused by an assertion.
+        '';
       };
       publicKey = mkOption {
-        type = types.str;
-        default = "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=";
-        description = "The signing key of that cache.";
+        type = types.nullOr types.str;
+        default = null;
+        example = "cache-1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+        description = "The signing key of that cache. No default, for the reason given at `substituter`.";
       };
     };
 
@@ -311,6 +334,23 @@ in
   config = mkIf cfg.enable {
     assertions = [
       {
+        assertion = !cfg.cache.enable || cacheDeclared;
+        message = ''
+          nixkernel: nixkernel.cache.enable is true, but nixkernel.cache.substituter and nixkernel.cache.publicKey are not both
+          set. There is no default pair: a signing key a host trusts is the host's decision (the source's old cache was
+          compromised on 2026-10-15). Set both from the maintainer's announcement, or set nixkernel.cache.enable = false
+          and supply the kernel another way; without a cache the kernel compiles on the build host for hours.
+        '';
+      }
+      {
+        assertion = !cfg.cache.enable || !cacheCompromised;
+        message = ''
+          nixkernel: nixkernel.cache names the cache pair that was compromised on 2026-10-15 (${compromisedCache.host},
+          key ${compromisedCache.publicKey}); trusting it lets whoever holds the key put arbitrary code into the kernel and
+          every module built on it. Use the replacement the maintainer announced, or set nixkernel.cache.enable = false.
+        '';
+      }
+      {
         assertion = lacking == [ ];
         message = ''
           nixkernel: the level `${level}` cannot run on this host: its declared CPU lacks ${lib.concatStringsSep ", " lacking}.
@@ -372,7 +412,7 @@ in
 
     # Builds happen on the deploying host, which needs the key anyway; the host needs it to accept the
     # paths and to fetch them itself if it ever has to.
-    nix.settings = mkIf cfg.cache.enable {
+    nix.settings = mkIf (cfg.cache.enable && cacheDeclared) {
       extra-substituters = [ cfg.cache.substituter ];
       extra-trusted-public-keys = [ cfg.cache.publicKey ];
     };
