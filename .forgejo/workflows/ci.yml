@@ -54,5 +54,5 @@ jobs:
           test "$("$tool" source-revision)" = "$CCID_REVISION"
           export CCID_SOURCE_REVISION="${{ github.sha }}"
           "$tool" render --repo "$PWD" --check
-          export CI_COMMIT_SHA="${{ github.sha }}" CI_REPOSITORY_URL="${{ github.server_url }}/${{ github.repository }}"
-          exec "$tool" check --repo "$PWD" --check 'native' --check 'eval' --check 'list' --check 'all-systems'
+          export CCID_BIN="$tool" CI_COMMIT_SHA="${{ github.sha }}" CI_REPOSITORY_URL="${{ github.server_url }}/${{ github.repository }}" CHECKS='native,eval,list,all-systems'
+          exec 'bash' '.ci/run-cached.sh'

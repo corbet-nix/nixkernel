@@ -29,5 +29,5 @@ scheduler = "forgejo"
 runs_on = "heavy"
 checks = ["native", "eval", "list", "all-systems"]
 workflow = "ci"
-command = ["ccid:run-declared-checks"]
+command = ["bash", ".ci/run-cached.sh"]
 events = ["manual"]
