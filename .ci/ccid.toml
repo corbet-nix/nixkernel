@@ -22,10 +22,12 @@ mode = "all-systems"
 # Pre-existing nix checks above preserved verbatim; Crow job wiring appended below.
 
 [render]
-tool_revision = "81ebac8e86e20bc93b69d5e912bbcb0c0d036d58"
-
+tool_revision = "bd9aff07073185fb0a3503bab331aedefb6d8fd2"
+tool_sha256 = "38c0eadf2a2adb406f83c7d4892bc01a0a10b95671e1e671358e43a257bb5d23"
 [jobs.verify]
-scheduler = "crow"
+scheduler = "forgejo"
+runs_on = "heavy"
 checks = ["native", "eval", "list", "all-systems"]
-workflow = "repository-jobs"
-command = ["bash", ".ci/run-cached.sh"]
+workflow = "ci"
+command = ["ccid:run-declared-checks"]
+events = ["manual"]
