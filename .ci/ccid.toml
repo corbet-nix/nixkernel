@@ -26,7 +26,16 @@ render_schema = 2
 [jobs.verify]
 scheduler = "forgejo"
 runs_on = "linux"
-checks = ["native", "eval", "list", "all-systems"]
+checks = ["native", "eval", "list"]
 workflow = "ci"
+command = ["bash", ".ci/run-cached.sh"]
+
+# The multi-arch evaluation by hand (workflow_dispatch only, never a push or pull request): it needs far more memory
+# than the per-push verify, so it runs on request and before a release instead.
+[jobs.heavy]
+scheduler = "forgejo"
+runs_on = "linux"
+checks = ["all-systems"]
+workflow = "heavy"
 command = ["bash", ".ci/run-cached.sh"]
 events = ["manual"]

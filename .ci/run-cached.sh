@@ -6,10 +6,10 @@ exec 2>&1
 : "${CI_COMMIT_SHA:?Missing verified source revision}"
 : "${CI_REPOSITORY_URL:?Missing canonical repository identity}"
 : "${CHECKS:?Missing declared check selection}"
-if [ "$CHECKS" != "native,eval,list,all-systems" ]; then
-  echo "CHECKS must be exactly 'native,eval,list,all-systems', got: $CHECKS" >&2
-  exit 2
-fi
+case "$CHECKS" in
+  "native,eval,list"|all-systems) ;;
+  *) echo "CHECKS must be exactly 'native,eval,list' or 'all-systems', got: $CHECKS" >&2; exit 2 ;;
+esac
 cache_root=${CI_CACHE_ROOT:-${CARGO_HOME:-}}
 [[ $cache_root = /* ]] || { echo 'An absolute persistent CI_CACHE_ROOT or CARGO_HOME is required' >&2; exit 2; }
 namespace=$(printf '%s' "$CI_REPOSITORY_URL" | sha256sum | cut -c1-24)
@@ -43,11 +43,7 @@ nix --version
 moon --version
 proto --version
 nix flake metadata --no-update-lock-file
-"$CCID_BIN" cached --repo "$PWD" --check native
-test -s ".ccid/results/native.jsonl"
-"$CCID_BIN" cached --repo "$PWD" --check eval
-test -s ".ccid/results/eval.jsonl"
-"$CCID_BIN" cached --repo "$PWD" --check list
-test -s ".ccid/results/list.jsonl"
-"$CCID_BIN" cached --repo "$PWD" --check all-systems
-test -s ".ccid/results/all-systems.jsonl"
+for check in ${CHECKS//,/ }; do
+  "$CCID_BIN" cached --repo "$PWD" --check "$check"
+  test -s ".ccid/results/$check.jsonl"
+done
